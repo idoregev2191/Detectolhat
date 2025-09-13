@@ -1,0 +1,7 @@
+{
+  "name": "Detectolhat",
+  "description": "An AI-powered application that uses your camera to detect if you are a 'tolhat' or 'lo tolhat', based on a Google Teachable Machine model. Simple, elegant, and fast.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
