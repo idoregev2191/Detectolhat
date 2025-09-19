@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { Prediction } from './types';
 import PredictionBar from './components/PredictionBar';
 
-// Teachable Machine's global `tmImage` object is loaded from a script tag in index.html.
-// We declare it here to inform TypeScript about its existence on the window object.
+// Teachable Machine's global `tmImage` and `tf` objects are loaded from script tags in index.html.
+// We declare them here to inform TypeScript about their existence on the window object.
 declare global {
     interface Window {
         tmImage: any;
+        tf: any;
     }
 }
 
@@ -24,6 +25,13 @@ const App: React.FC = () => {
     const requestAnimationFrameRef = useRef<number>(0);
 
     const loadModel = async () => {
+        // Ensure Teachable Machine and TensorFlow.js libraries are loaded
+        if (!window.tmImage || !window.tf) {
+            setError("Required AI libraries not loaded. Please check your internet connection and refresh.");
+            setIsLoadingModel(false);
+            return;
+        }
+
         try {
             const modelURL = MODEL_URL + "model.json";
             const metadataURL = MODEL_URL + "metadata.json";
@@ -66,13 +74,15 @@ const App: React.FC = () => {
         }
     };
 
-    const predictLoop = async () => {
+    const predictLoop = useCallback(async () => {
         if (modelRef.current && videoRef.current && videoRef.current.readyState >= 3) {
-            const predictionResult = await modelRef.current.predict(videoRef.current);
+            // Pass `true` as the second argument to flip the webcam image horizontally.
+            // This is necessary because the Teachable Machine training UI shows a mirrored view.
+            const predictionResult = await modelRef.current.predict(videoRef.current, true);
             setPredictions(predictionResult);
         }
         requestAnimationFrameRef.current = requestAnimationFrame(predictLoop);
-    };
+    }, []);
 
     useEffect(() => {
         loadModel();
@@ -87,8 +97,7 @@ const App: React.FC = () => {
                 cancelAnimationFrame(requestAnimationFrameRef.current);
             }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [webcamActive]);
+    }, [webcamActive, predictLoop]);
 
     useEffect(() => {
         return () => {
